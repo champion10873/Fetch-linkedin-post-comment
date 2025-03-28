@@ -100,6 +100,19 @@ const retrievePosts = async (profileUrl) => {
   const profile = await Service.retrieveProfile(public_identifier);
   const provider_id = profile.provider_id;
   console.log("Provider ID:", provider_id);
+
+  let cursor = "";
+  let monthlyPosts = [];
+  while (cursor != null) {
+    const posts = await Service.retrieveMonthlyPosts(provider_id, cursor);
+    if (posts.items.length === 0) {
+      break;
+    }
+    monthlyPosts.push(...posts.items);
+    cursor = posts.cursor;
+  }
+  console.log(monthlyPosts.length, "Monthly Posts");
+  console.log(monthlyPosts[0]);
 };
 
 async function main() {

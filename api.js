@@ -25,6 +25,46 @@ class Services {
     }
   }
 
+  async retrieveMonthlyPosts(provider_id, cursor) {
+    try {
+      if (cursor) {
+        const response = await this.unipileApi.post(
+          "/linkedin/search?account_id=" +
+            ACCOUNT_ID +
+            "&limit=50&cursor=" +
+            cursor,
+          {
+            api: "classic",
+            category: "posts",
+            posted_by: {
+              member: [provider_id],
+            },
+            sort_by: "date",
+            date_posted: "past_month",
+          }
+        );
+        return response.data;
+      } else {
+        const response = await this.unipileApi.post(
+          "/linkedin/search?account_id=" + ACCOUNT_ID + "&limit=50",
+          {
+            api: "classic",
+            category: "posts",
+            posted_by: {
+              member: [provider_id],
+            },
+            sort_by: "date",
+            date_posted: "past_month",
+          }
+        );
+        return response.data;
+      }
+    } catch (error) {
+      console.error("Error retrieving monthly posts:", error.status);
+      throw error;
+    }
+  }
+
   async searchPost(postId) {
     try {
       const response = await this.unipileApi.get(
