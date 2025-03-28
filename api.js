@@ -65,14 +65,30 @@ class Services {
     }
   }
 
-  async searchPost(postId) {
+  async retrieveComments(postId, cursor) {
     try {
-      const response = await this.unipileApi.get(
-        "/posts/" + postId + "?account_id=" + ACCOUNT_ID
-      );
-      return response.data;
+      if (cursor) {
+        const response = await this.unipileApi.get(
+          "/posts/" +
+            postId +
+            "/comments?account_id=" +
+            ACCOUNT_ID +
+            "&limit=50&cursor=" +
+            cursor
+        );
+        return response.data;
+      } else {
+        const response = await this.unipileApi.get(
+          "/posts/" +
+            postId +
+            "/comments?account_id=" +
+            ACCOUNT_ID +
+            "&limit=50"
+        );
+        return response.data;
+      }
     } catch (error) {
-      console.error("Error searching posts:", error.status);
+      console.error("Error retrieving comments:", error.status);
       throw error;
     }
   }

@@ -5,22 +5,38 @@ const Service = require("./api.js");
 const Utils = require("./utils.js");
 
 let resultPosts = [];
-// let resultComments = [];
+let resultComments = [];
 
 async function saveResult() {
   const currentDate = new Date().toISOString().split("T")[0];
-  const filePath = `./posts_${currentDate}.csv`;
+  const postFilePath = `./posts_${currentDate}.csv`;
+  const commentFilePath = `./comments_${currentDate}.csv`;
 
   // Save data to CSV file
-  const csv = parse(resultPosts);
-  const bom = "\ufeff"; // UTF-8 BOM
-  const dataToAppend = bom + csv + "\n";
+  if (resultPosts.length > 0) {
+    const postCSV = parse(resultPosts);
+    const bom = "\ufeff"; // UTF-8 BOM
+    const postsToAppend = bom + postCSV + "\n";
 
-  try {
-    fs.writeFileSync(filePath, dataToAppend, { encoding: "utf8" });
-    // console.log("CSV file saved successfully");
-  } catch (err) {
-    console.error("Error writing to CSV file:", err);
+    try {
+      fs.writeFileSync(postFilePath, postsToAppend, { encoding: "utf8" });
+      // console.log("CSV file saved successfully");
+    } catch (err) {
+      console.error("Error writing to CSV file:", err);
+    }
+  }
+
+  if (resultComments.length > 0) {
+    const commentCSV = parse(resultComments);
+    const bom = "\ufeff"; // UTF-8 BOM
+    const commentsToAppend = bom + commentCSV + "\n";
+
+    try {
+      fs.writeFileSync(commentFilePath, commentsToAppend, { encoding: "utf8" });
+      // console.log("CSV file saved successfully");
+    } catch (err) {
+      console.error("Error writing to CSV file:", err);
+    }
   }
 }
 
@@ -41,6 +57,39 @@ const importProfiles = () => {
         reject(error);
       });
   });
+};
+
+const retrieveComments = async (postUrl, postId) => {
+  let cursor = "";
+  let comments = [];
+  while (cursor != null) {
+    const commentsResponse = await Service.retrieveComments(postId, cursor);
+    if (commentsResponse.items.length === 0) {
+      break;
+    }
+    comments.push(...commentsResponse.items);
+    cursor = commentsResponse.cursor;
+  }
+  console.log(comments.length, "Comments");
+
+  if (comments.length > 0) {
+    const structuredComments = comments.map((comment) => {
+      return {
+        profileLink: comment.author_details.profile_url,
+        fullName: comment.author,
+        occupation: comment.author_details.headline,
+        comment: comment.text,
+        commentDate: comment.date,
+        likesCount: comment.reaction_counter,
+        postUrl: postUrl,
+        sourceUserId: comment.author_details.id,
+      };
+    });
+
+    resultComments.push(...structuredComments);
+  } else {
+    console.log("No comments found for postId:", postId);
+  }
 };
 
 const retrievePosts = async (profileUrl) => {
@@ -82,10 +131,20 @@ const retrievePosts = async (profileUrl) => {
         repostIsCompany: post.repost_content?.author?.is_company,
         repostParsedAt: post.repost_content?.parsed_datetime,
         repostPostedAt: post.repost_content?.date,
+        postId: post.social_id,
       };
     });
 
     resultPosts.push(...structuredPosts);
+
+    const popularPosts = structuredPosts.filter(
+      (post) => post.commentCount >= 25
+    );
+    console.log(popularPosts.length, "Popular Posts");
+
+    for (const post of popularPosts) {
+      await retrieveComments(post.sharedPostUrl, post.postId);
+    }
   } else {
     console.log("No posts found for the profile:", profileUrl);
   }
@@ -94,13 +153,12 @@ const retrievePosts = async (profileUrl) => {
 async function main() {
   const profiles = await importProfiles();
 
-  // for (const profile of profiles) {
-  //   await retrievePosts(profile);
-  // }
-
-  await retrievePosts(profiles[0]);
+  for (const profile of profiles) {
+    await retrievePosts(profile);
+  }
 
   console.log(resultPosts.length, "Posts in total");
+  console.log(resultComments.length, "Comments in total");
   await saveResult();
 }
 
