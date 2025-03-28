@@ -43,7 +43,7 @@ async function saveResult() {
 const importProfiles = () => {
   return new Promise((resolve, reject) => {
     const profiles = [];
-    fs.createReadStream("People.csv")
+    fs.createReadStream("Companies.csv")
       .pipe(csv())
       .on("data", (row) => {
         profiles.push(row["profileUrl"]);
@@ -98,17 +98,29 @@ const retrieveComments = async (postUrl, postId) => {
 };
 
 const retrievePosts = async (index, profileUrl) => {
-  const public_identifier = Utils.extractPublicIdentifier(profileUrl);
+  const { public_identifier, is_company } =
+    Utils.extractPublicIdentifier(profileUrl);
   if (!public_identifier) {
     console.log("Invalid profile URL:", profileUrl);
     return;
   }
-  console.log("Profile", index + 1, "Public Identifier:", public_identifier);
+  console.log(
+    "Profile",
+    index + 1,
+    "Public Identifier:",
+    public_identifier,
+    is_company
+  );
 
   let provider_id;
   try {
-    const profile = await Service.retrieveProfile(public_identifier);
-    provider_id = profile.provider_id;
+    if (is_company) {
+      const profile = await Service.retrieveCompanyProfile(public_identifier);
+      provider_id = profile.id;
+    } else {
+      const profile = await Service.retrieveProfile(public_identifier);
+      provider_id = profile.provider_id;
+    }
   } catch (error) {
     console.log("Error retrieving profile:", error.response.data);
     return;
@@ -119,12 +131,24 @@ const retrievePosts = async (index, profileUrl) => {
   let monthlyPosts = [];
   while (cursor != null) {
     try {
-      const posts = await Service.retrieveMonthlyPosts(provider_id, cursor);
-      if (posts.items.length === 0) {
-        break;
+      if (is_company) {
+        const posts = await Service.retrieveCompanyMonthlyPosts(
+          provider_id,
+          cursor
+        );
+        if (posts.items.length === 0) {
+          break;
+        }
+        monthlyPosts.push(...posts.items);
+        cursor = posts.cursor;
+      } else {
+        const posts = await Service.retrieveMonthlyPosts(provider_id, cursor);
+        if (posts.items.length === 0) {
+          break;
+        }
+        monthlyPosts.push(...posts.items);
+        cursor = posts.cursor;
       }
-      monthlyPosts.push(...posts.items);
-      cursor = posts.cursor;
     } catch (error) {
       console.log("Error retrieving monthly posts:", error.response.data);
       return;

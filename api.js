@@ -25,40 +25,68 @@ class Services {
     }
   }
 
+  async retrieveCompanyProfile(public_identifier) {
+    try {
+      const response = await this.unipileApi.get(
+        "/linkedin/company/" + public_identifier + "?account_id=" + ACCOUNT_ID
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error retrieving company profile:", error.status);
+      throw error;
+    }
+  }
+
   async retrieveMonthlyPosts(provider_id, cursor) {
     try {
+      let endpoint;
       if (cursor) {
-        const response = await this.unipileApi.post(
+        endpoint =
           "/linkedin/search?account_id=" +
-            ACCOUNT_ID +
-            "&limit=50&cursor=" +
-            cursor,
-          {
-            api: "classic",
-            category: "posts",
-            posted_by: {
-              member: [provider_id],
-            },
-            sort_by: "date",
-            date_posted: "past_month",
-          }
-        );
-        return response.data;
+          ACCOUNT_ID +
+          "&limit=50&cursor=" +
+          cursor;
       } else {
-        const response = await this.unipileApi.post(
-          "/linkedin/search?account_id=" + ACCOUNT_ID + "&limit=50",
-          {
-            api: "classic",
-            category: "posts",
-            posted_by: {
-              member: [provider_id],
-            },
-            sort_by: "date",
-            date_posted: "past_month",
-          }
-        );
-        return response.data;
+        endpoint = "/linkedin/search?account_id=" + ACCOUNT_ID + "&limit=50";
       }
+      const response = await this.unipileApi.post(endpoint, {
+        api: "classic",
+        category: "posts",
+        posted_by: {
+          member: [provider_id],
+        },
+        sort_by: "date",
+        date_posted: "past_month",
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error retrieving monthly posts:", error.status);
+      throw error;
+    }
+  }
+
+  async retrieveCompanyMonthlyPosts(provider_id, cursor) {
+    try {
+      let endpoint;
+      if (cursor) {
+        endpoint =
+          "/linkedin/search?account_id=" +
+          ACCOUNT_ID +
+          "&limit=50&cursor=" +
+          cursor;
+      } else {
+        endpoint = "/linkedin/search?account_id=" + ACCOUNT_ID + "&limit=50";
+      }
+      const response = await this.unipileApi.post(endpoint, {
+        api: "classic",
+        category: "posts",
+        posted_by: {
+          company: [provider_id],
+        },
+        sort_by: "date",
+        date_posted: "past_month",
+      });
+      return response.data;
     } catch (error) {
       console.error("Error retrieving monthly posts:", error.status);
       throw error;
@@ -67,26 +95,25 @@ class Services {
 
   async retrieveComments(postId, cursor) {
     try {
+      let endpoint;
       if (cursor) {
-        const response = await this.unipileApi.get(
+        endpoint =
           "/posts/" +
-            postId +
-            "/comments?account_id=" +
-            ACCOUNT_ID +
-            "&limit=50&cursor=" +
-            cursor
-        );
-        return response.data;
+          postId +
+          "/comments?account_id=" +
+          ACCOUNT_ID +
+          "&limit=50&cursor=" +
+          cursor;
       } else {
-        const response = await this.unipileApi.get(
+        endpoint =
           "/posts/" +
-            postId +
-            "/comments?account_id=" +
-            ACCOUNT_ID +
-            "&limit=50"
-        );
-        return response.data;
+          postId +
+          "/comments?account_id=" +
+          ACCOUNT_ID +
+          "&limit=50";
       }
+      const response = await this.unipileApi.get(endpoint);
+      return response.data;
     } catch (error) {
       console.error("Error retrieving comments:", error.status);
       throw error;
