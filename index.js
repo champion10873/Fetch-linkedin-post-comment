@@ -96,6 +96,10 @@ const importProfiles = () => {
 const retrievePosts = async (profileUrl) => {
   const public_identifier = Utils.extractPublicIdentifier(profileUrl);
   console.log("Public Identifier:", public_identifier);
+
+  const profile = await Service.retrieveProfile(public_identifier);
+  const provider_id = profile.provider_id;
+  console.log("Provider ID:", provider_id);
 };
 
 async function main() {

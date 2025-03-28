@@ -13,6 +13,18 @@ class Services {
     });
   }
 
+  async retrieveProfile(public_identifier) {
+    try {
+      const response = await this.unipileApi.get(
+        "/users/" + public_identifier + "?account_id=" + ACCOUNT_ID
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error retrieving profile:", error.status);
+      throw error;
+    }
+  }
+
   async searchPost(postId) {
     try {
       const response = await this.unipileApi.get(
