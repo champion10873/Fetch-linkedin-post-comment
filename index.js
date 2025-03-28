@@ -1,8 +1,10 @@
+const fs = require("fs");
+const csv = require("csv-parser");
 const Service = require("./api.js");
 const Utils = require("./utils.js");
 
-let resultPosts = [];
-let resultComments = [];
+// let resultPosts = [];
+// let resultComments = [];
 
 // async function saveResult() {
 //   const currentDate = new Date().toISOString().split("T")[0];
@@ -72,10 +74,38 @@ let resultComments = [];
 //   }
 // }
 
+const importProfiles = () => {
+  return new Promise((resolve, reject) => {
+    const profiles = [];
+    fs.createReadStream("People.csv")
+      .pipe(csv())
+      .on("data", (row) => {
+        profiles.push(row["profileUrl"]);
+      })
+      .on("end", () => {
+        console.log("CSV file successfully processed:", profiles.length);
+        resolve(profiles);
+      })
+      .on("error", (error) => {
+        console.error("Error reading CSV file:", error);
+        reject(error);
+      });
+  });
+};
+
+const retrievePosts = async (profileUrl) => {
+  const public_identifier = Utils.extractPublicIdentifier(profileUrl);
+  console.log("Public Identifier:", public_identifier);
+};
+
 async function main() {
-  const profiles = await Utils.importProfiles();
-  for (const profile of profiles) {
-  }
+  const profiles = await importProfiles();
+
+  // for (const profile of profiles) {
+  //   await retrievePosts(profile);
+  // }
+
+  await retrievePosts(profiles[0]);
 }
 
 main().catch((err) => console.error(err));
