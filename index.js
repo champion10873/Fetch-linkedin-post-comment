@@ -63,12 +63,17 @@ const retrieveComments = async (postUrl, postId) => {
   let cursor = "";
   let comments = [];
   while (cursor != null) {
-    const commentsResponse = await Service.retrieveComments(postId, cursor);
-    if (commentsResponse.items.length === 0) {
-      break;
+    try {
+      const commentsResponse = await Service.retrieveComments(postId, cursor);
+      if (commentsResponse.items.length === 0) {
+        break;
+      }
+      comments.push(...commentsResponse.items);
+      cursor = commentsResponse.cursor;
+    } catch (error) {
+      console.error("Error retrieving comments:", error.response.data);
+      return;
     }
-    comments.push(...commentsResponse.items);
-    cursor = commentsResponse.cursor;
   }
   console.log(comments.length, "Comments");
 
@@ -92,23 +97,38 @@ const retrieveComments = async (postUrl, postId) => {
   }
 };
 
-const retrievePosts = async (profileUrl) => {
+const retrievePosts = async (index, profileUrl) => {
   const public_identifier = Utils.extractPublicIdentifier(profileUrl);
-  console.log("Public Identifier:", public_identifier);
+  if (!public_identifier) {
+    console.log("Invalid profile URL:", profileUrl);
+    return;
+  }
+  console.log("Profile", index + 1, "Public Identifier:", public_identifier);
 
-  const profile = await Service.retrieveProfile(public_identifier);
-  const provider_id = profile.provider_id;
-  console.log("Provider ID:", provider_id);
+  let provider_id;
+  try {
+    const profile = await Service.retrieveProfile(public_identifier);
+    provider_id = profile.provider_id;
+  } catch (error) {
+    console.log("Error retrieving profile:", error.response.data);
+    return;
+  }
+  // console.log("Provider ID:", provider_id);
 
   let cursor = "";
   let monthlyPosts = [];
   while (cursor != null) {
-    const posts = await Service.retrieveMonthlyPosts(provider_id, cursor);
-    if (posts.items.length === 0) {
-      break;
+    try {
+      const posts = await Service.retrieveMonthlyPosts(provider_id, cursor);
+      if (posts.items.length === 0) {
+        break;
+      }
+      monthlyPosts.push(...posts.items);
+      cursor = posts.cursor;
+    } catch (error) {
+      console.log("Error retrieving monthly posts:", error.response.data);
+      return;
     }
-    monthlyPosts.push(...posts.items);
-    cursor = posts.cursor;
   }
   console.log(monthlyPosts.length, "Monthly Posts");
 
@@ -153,8 +173,8 @@ const retrievePosts = async (profileUrl) => {
 async function main() {
   const profiles = await importProfiles();
 
-  for (const profile of profiles) {
-    await retrievePosts(profile);
+  for (const [index, profile] of profiles.entries()) {
+    await retrievePosts(index, profile);
   }
 
   console.log(resultPosts.length, "Posts in total");
