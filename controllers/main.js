@@ -1,8 +1,8 @@
 const fs = require("fs");
 const csv = require("csv-parser");
 const { parse } = require("json2csv");
-const Service = require("./api.js");
-const Utils = require("./utils.js");
+const Service = require("../utils/api.js");
+const Utils = require("../utils/utils.js");
 
 let resultPosts = [];
 let resultComments = [];
@@ -194,16 +194,15 @@ const retrievePosts = async (index, profileUrl) => {
   }
 };
 
-async function main() {
-  const profiles = await importProfiles();
+exports.start = async (req, res) => {
+  res.json({ message: "Started successfully!" });
+  // const profiles = await importProfiles();
 
-  for (const [index, profile] of profiles.entries()) {
-    await retrievePosts(index, profile);
-  }
+  // for (const [index, profile] of profiles.entries()) {
+  //   await retrievePosts(index, profile);
+  // }
 
-  console.log(resultPosts.length, "Posts in total");
-  console.log(resultComments.length, "Comments in total");
-  await saveResult();
-}
-
-main().catch((err) => console.error(err));
+  // console.log(resultPosts.length, "Posts in total");
+  // console.log(resultComments.length, "Comments in total");
+  // await saveResult();
+};

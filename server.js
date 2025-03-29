@@ -11,10 +11,11 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
 app.use(express.json());
 
-// Sample route
-app.get("/", (req, res) => {
-  res.send("Hello, World!");
-});
+// Define Routes
+const mainRoutes = require("./routes/main");
+
+// Use Routes
+app.use("/api/main", mainRoutes);
 
 // Start the server
 const PORT = process.env.PORT || 5002;
