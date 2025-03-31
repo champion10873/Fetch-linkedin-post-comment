@@ -1,63 +1,11 @@
-const fs = require("fs");
-const csv = require("csv-parser");
-const { parse } = require("json2csv");
-const Service = require("./api.js");
-const Utils = require("./utils.js");
+const Service = require("../utils/api.js");
+const Utils = require("../utils/utils.js");
+const Status = require("../models/Status.js");
+const Post = require("../models/Post.js");
+const Comment = require("../models/Comment.js");
 
 let resultPosts = [];
 let resultComments = [];
-
-async function saveResult() {
-  const currentDate = new Date().toISOString().split("T")[0];
-  const postFilePath = `./posts_${currentDate}.csv`;
-  const commentFilePath = `./comments_${currentDate}.csv`;
-
-  // Save data to CSV file
-  if (resultPosts.length > 0) {
-    const postCSV = parse(resultPosts);
-    const bom = "\ufeff"; // UTF-8 BOM
-    const postsToAppend = bom + postCSV + "\n";
-
-    try {
-      fs.writeFileSync(postFilePath, postsToAppend, { encoding: "utf8" });
-      // console.log("CSV file saved successfully");
-    } catch (err) {
-      console.error("Error writing to CSV file:", err);
-    }
-  }
-
-  if (resultComments.length > 0) {
-    const commentCSV = parse(resultComments);
-    const bom = "\ufeff"; // UTF-8 BOM
-    const commentsToAppend = bom + commentCSV + "\n";
-
-    try {
-      fs.writeFileSync(commentFilePath, commentsToAppend, { encoding: "utf8" });
-      // console.log("CSV file saved successfully");
-    } catch (err) {
-      console.error("Error writing to CSV file:", err);
-    }
-  }
-}
-
-const importProfiles = () => {
-  return new Promise((resolve, reject) => {
-    const profiles = [];
-    fs.createReadStream("Companies.csv")
-      .pipe(csv())
-      .on("data", (row) => {
-        profiles.push(row["profileUrl"]);
-      })
-      .on("end", () => {
-        console.log("CSV file successfully processed:", profiles.length);
-        resolve(profiles);
-      })
-      .on("error", (error) => {
-        console.error("Error reading CSV file:", error);
-        reject(error);
-      });
-  });
-};
 
 const retrieveComments = async (postUrl, postId) => {
   let cursor = "";
@@ -157,11 +105,9 @@ const retrievePosts = async (index, profileUrl) => {
   console.log(monthlyPosts.length, "Monthly Posts");
 
   if (monthlyPosts.length > 0) {
-    monthlyPosts[0].profileUrl = profileUrl;
-
     const structuredPosts = monthlyPosts.map((post) => {
       return {
-        profileUrl: post.profileUrl,
+        profileUrl: profileUrl,
         postContent: post.text,
         likeCount: post.reaction_counter,
         commentCount: post.comment_counter,
@@ -194,16 +140,98 @@ const retrievePosts = async (index, profileUrl) => {
   }
 };
 
-async function main() {
-  const profiles = await importProfiles();
-
-  for (const [index, profile] of profiles.entries()) {
-    await retrievePosts(index, profile);
+exports.start = async (req, res) => {
+  // Initialize settings
+  let status = await Status.findOne({});
+  if (!status) {
+    status = new Status({
+      totalProfiles: 0,
+      currentIndex: 0,
+    });
+    await status.save();
+    console.log("Status created");
+  }
+  if (status.isRunning) {
+    return res.status(400).json({ error: "Script is already running" });
   }
 
-  console.log(resultPosts.length, "Posts in total");
-  console.log(resultComments.length, "Comments in total");
-  await saveResult();
-}
+  try {
+    // Delete all existing posts and comments
+    await Post.deleteMany({});
+    await Comment.deleteMany({});
+    resultPosts = [];
+    resultComments = [];
+    console.log("All existing posts and comments have been deleted.");
 
-main().catch((err) => console.error(err));
+    const { profiles } = req.body;
+    console.log(profiles.length, "Profiles received");
+    status.isRunning = true;
+    status.totalProfiles = profiles.length;
+    await status.save();
+
+    res.json({ message: "Started fetching data" });
+
+    for (const [index, profile] of profiles.entries()) {
+      await retrievePosts(index, profile);
+      status.currentIndex = index + 1;
+      await status.save();
+    }
+
+    console.log(resultPosts.length, "Posts in total");
+    console.log(resultComments.length, "Comments in total");
+
+    // Save results
+    for (const post of resultPosts) {
+      const newPost = new Post(post);
+      await newPost.save();
+    }
+    for (const comment of resultComments) {
+      const newComment = new Comment(comment);
+      await newComment.save();
+    }
+    status.isRunning = false;
+    await status.save();
+    console.log("Data saved");
+  } catch (error) {
+    console.error("Error:", error.message);
+    status.isRunning = false;
+    await status.save();
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+exports.getPosts = async (req, res) => {
+  try {
+    const status = await Status.findOne({});
+    if (status.isRunning) {
+      res.json({
+        message: "Script is still running",
+        progress: `${status.currentIndex}/${status.totalProfiles} profiles done`,
+      });
+    } else {
+      const posts = await Post.find({});
+      res.json({ posts });
+    }
+  } catch (error) {
+    console.error("Error:", error.message);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+exports.getComments = async (req, res) => {
+  try {
+    const status = await Status.findOne({});
+    if (status.isRunning) {
+      res.json({
+        message: "Script is still running",
+        progress: `${status.currentIndex}/${status.totalProfiles} profiles done`,
+      });
+    } else {
+      const comments = await Comment.find({});
+      res.json({ comments });
+    }
+  } catch (error) {
+    console.error("Error:", error.message);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};

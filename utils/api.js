@@ -1,12 +1,11 @@
 const axios = require("axios");
-const { UNIPILE_API_URL, UNIPILE_API_KEY, ACCOUNT_ID } = require("./config.js");
 
 class Services {
   constructor() {
     this.unipileApi = axios.create({
-      baseURL: `${UNIPILE_API_URL}/api/v1`,
+      baseURL: `${process.env.UNIPILE_API_URL}/api/v1`,
       headers: {
-        "X-API-KEY": UNIPILE_API_KEY,
+        "X-API-KEY": process.env.UNIPILE_API_KEY,
         accept: "application/json",
         "content-type": "application/json",
       },
@@ -16,7 +15,7 @@ class Services {
   async retrieveProfile(public_identifier) {
     try {
       const response = await this.unipileApi.get(
-        "/users/" + public_identifier + "?account_id=" + ACCOUNT_ID
+        "/users/" + public_identifier + "?account_id=" + process.env.ACCOUNT_ID
       );
       return response.data;
     } catch (error) {
@@ -28,7 +27,7 @@ class Services {
   async retrieveCompanyProfile(public_identifier) {
     try {
       const response = await this.unipileApi.get(
-        "/linkedin/company/" + public_identifier + "?account_id=" + ACCOUNT_ID
+        "/linkedin/company/" + public_identifier + "?process.env.=" + process.env.ACCOUNT_ID
       );
       return response.data;
     } catch (error) {
@@ -43,11 +42,11 @@ class Services {
       if (cursor) {
         endpoint =
           "/linkedin/search?account_id=" +
-          ACCOUNT_ID +
+          process.env.ACCOUNT_ID +
           "&limit=50&cursor=" +
           cursor;
       } else {
-        endpoint = "/linkedin/search?account_id=" + ACCOUNT_ID + "&limit=50";
+        endpoint = "/linkedin/search?account_id=" + process.env.ACCOUNT_ID + "&limit=50";
       }
       const response = await this.unipileApi.post(endpoint, {
         api: "classic",
@@ -71,11 +70,11 @@ class Services {
       if (cursor) {
         endpoint =
           "/linkedin/search?account_id=" +
-          ACCOUNT_ID +
+          process.env.ACCOUNT_ID +
           "&limit=50&cursor=" +
           cursor;
       } else {
-        endpoint = "/linkedin/search?account_id=" + ACCOUNT_ID + "&limit=50";
+        endpoint = "/linkedin/search?account_id=" + process.env.ACCOUNT_ID + "&limit=50";
       }
       const response = await this.unipileApi.post(endpoint, {
         api: "classic",
@@ -101,7 +100,7 @@ class Services {
           "/posts/" +
           postId +
           "/comments?account_id=" +
-          ACCOUNT_ID +
+          process.env.ACCOUNT_ID +
           "&limit=50&cursor=" +
           cursor;
       } else {
@@ -109,7 +108,7 @@ class Services {
           "/posts/" +
           postId +
           "/comments?account_id=" +
-          ACCOUNT_ID +
+          process.env.ACCOUNT_ID +
           "&limit=50";
       }
       const response = await this.unipileApi.get(endpoint);
