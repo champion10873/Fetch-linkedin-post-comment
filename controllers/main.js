@@ -1,5 +1,8 @@
 const Service = require("../utils/api.js");
 const Utils = require("../utils/utils.js");
+const Status = require("../models/Status.js");
+const Post = require("../models/Post.js");
+const Comment = require("../models/Comment.js");
 
 let resultPosts = [];
 let resultComments = [];
@@ -138,20 +141,61 @@ const retrievePosts = async (index, profileUrl) => {
 };
 
 exports.start = async (req, res) => {
+  // Initialize settings
+  let status = await Status.findOne({});
+  if (!status) {
+    status = new Status({
+      totalProfiles: 0,
+      currentIndex: 0,
+    });
+    await status.save();
+    console.log("Status created");
+  }
+  if (status.isRunning) {
+    return res.status(400).json({ error: "Script is already running" });
+  }
+
   try {
+    // Delete all existing posts and comments
+    await Post.deleteMany({});
+    await Comment.deleteMany({});
+    resultPosts = [];
+    resultComments = [];
+    console.log("All existing posts and comments have been deleted.");
+
     const { profiles } = req.body;
     console.log(profiles.length, "Profiles received");
+    status.isRunning = true;
+    status.totalProfiles = profiles.length;
+    await status.save();
+
+    res.json({ message: "Started fetching data" });
 
     for (const [index, profile] of profiles.entries()) {
       await retrievePosts(index, profile);
+      status.currentIndex = index + 1;
+      await status.save();
     }
 
     console.log(resultPosts.length, "Posts in total");
     console.log(resultComments.length, "Comments in total");
 
-    res.json({ resultPosts, resultComments });
+    // Save results
+    for (const post of resultPosts) {
+      const newPost = new Post(post);
+      await newPost.save();
+    }
+    for (const comment of resultComments) {
+      const newComment = new Comment(comment);
+      await newComment.save();
+    }
+    status.isRunning = false;
+    await status.save();
+    console.log("Data saved");
   } catch (error) {
     console.error("Error:", error.message);
+    status.isRunning = false;
+    await status.save();
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
