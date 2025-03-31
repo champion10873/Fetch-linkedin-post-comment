@@ -1,63 +1,8 @@
-const fs = require("fs");
-const csv = require("csv-parser");
-const { parse } = require("json2csv");
 const Service = require("../utils/api.js");
 const Utils = require("../utils/utils.js");
 
 let resultPosts = [];
 let resultComments = [];
-
-async function saveResult() {
-  const currentDate = new Date().toISOString().split("T")[0];
-  const postFilePath = `./posts_${currentDate}.csv`;
-  const commentFilePath = `./comments_${currentDate}.csv`;
-
-  // Save data to CSV file
-  if (resultPosts.length > 0) {
-    const postCSV = parse(resultPosts);
-    const bom = "\ufeff"; // UTF-8 BOM
-    const postsToAppend = bom + postCSV + "\n";
-
-    try {
-      fs.writeFileSync(postFilePath, postsToAppend, { encoding: "utf8" });
-      // console.log("CSV file saved successfully");
-    } catch (err) {
-      console.error("Error writing to CSV file:", err);
-    }
-  }
-
-  if (resultComments.length > 0) {
-    const commentCSV = parse(resultComments);
-    const bom = "\ufeff"; // UTF-8 BOM
-    const commentsToAppend = bom + commentCSV + "\n";
-
-    try {
-      fs.writeFileSync(commentFilePath, commentsToAppend, { encoding: "utf8" });
-      // console.log("CSV file saved successfully");
-    } catch (err) {
-      console.error("Error writing to CSV file:", err);
-    }
-  }
-}
-
-const importProfiles = () => {
-  return new Promise((resolve, reject) => {
-    const profiles = [];
-    fs.createReadStream("Companies.csv")
-      .pipe(csv())
-      .on("data", (row) => {
-        profiles.push(row["profileUrl"]);
-      })
-      .on("end", () => {
-        console.log("CSV file successfully processed:", profiles.length);
-        resolve(profiles);
-      })
-      .on("error", (error) => {
-        console.error("Error reading CSV file:", error);
-        reject(error);
-      });
-  });
-};
 
 const retrieveComments = async (postUrl, postId) => {
   let cursor = "";
@@ -195,14 +140,20 @@ const retrievePosts = async (index, profileUrl) => {
 };
 
 exports.start = async (req, res) => {
-  res.json({ message: "Started successfully!" });
-  // const profiles = await importProfiles();
+  try {
+    const { profiles } = req.body;
+    console.log(profiles.length, "Profiles received");
 
-  // for (const [index, profile] of profiles.entries()) {
-  //   await retrievePosts(index, profile);
-  // }
+    for (const [index, profile] of profiles.entries()) {
+      await retrievePosts(index, profile);
+    }
 
-  // console.log(resultPosts.length, "Posts in total");
-  // console.log(resultComments.length, "Comments in total");
-  // await saveResult();
+    console.log(resultPosts.length, "Posts in total");
+    console.log(resultComments.length, "Comments in total");
+
+    res.json({ resultPosts, resultComments });
+  } catch (error) {
+    console.error("Error:", error.message);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 };
