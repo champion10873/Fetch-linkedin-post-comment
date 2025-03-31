@@ -6,6 +6,7 @@ const mainController = require("../controllers/main");
 router.post("/start", mainController.start);
 
 // Get data
-router.post("/get-data", mainController.getData);
+router.get("/get-posts", mainController.getPosts);
+router.get("/get-comments", mainController.getComments);
 
 module.exports = router;

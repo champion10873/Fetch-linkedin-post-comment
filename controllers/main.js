@@ -200,20 +200,36 @@ exports.start = async (req, res) => {
   }
 };
 
-exports.getData = async (req, res) => {
+exports.getPosts = async (req, res) => {
   try {
     const status = await Status.findOne({});
     if (status.isRunning) {
       res.json({
         message: "Script is still running",
-        progress: `${status.currentIndex}/${status.totalProfiles}`,
+        progress: `${status.currentIndex}/${status.totalProfiles} profiles done`,
       });
     } else {
       const posts = await Post.find({});
-      const comments = await Comment.find({});
-      res.json({ posts, comments });
+      res.json({ posts });
     }
-    console.log("Data sent");
+  } catch (error) {
+    console.error("Error:", error.message);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+exports.getComments = async (req, res) => {
+  try {
+    const status = await Status.findOne({});
+    if (status.isRunning) {
+      res.json({
+        message: "Script is still running",
+        progress: `${status.currentIndex}/${status.totalProfiles} profiles done`,
+      });
+    } else {
+      const comments = await Comment.find({});
+      res.json({ comments });
+    }
   } catch (error) {
     console.error("Error:", error.message);
     res.status(500).json({ error: "Internal Server Error" });
