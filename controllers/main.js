@@ -199,3 +199,23 @@ exports.start = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+exports.getData = async (req, res) => {
+  try {
+    const status = await Status.findOne({});
+    if (status.isRunning) {
+      res.json({
+        message: "Script is still running",
+        progress: `${status.currentIndex}/${status.totalProfiles}`,
+      });
+    } else {
+      const posts = await Post.find({});
+      const comments = await Comment.find({});
+      res.json({ posts, comments });
+    }
+    console.log("Data sent");
+  } catch (error) {
+    console.error("Error:", error.message);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
