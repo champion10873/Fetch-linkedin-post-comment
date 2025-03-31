@@ -102,11 +102,9 @@ const retrievePosts = async (index, profileUrl) => {
   console.log(monthlyPosts.length, "Monthly Posts");
 
   if (monthlyPosts.length > 0) {
-    monthlyPosts[0].profileUrl = profileUrl;
-
     const structuredPosts = monthlyPosts.map((post) => {
       return {
-        profileUrl: post.profileUrl,
+        profileUrl: profileUrl,
         postContent: post.text,
         likeCount: post.reaction_counter,
         commentCount: post.comment_counter,
